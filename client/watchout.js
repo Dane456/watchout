@@ -3,11 +3,14 @@ var boardSpecs = {
   height: 700,
   width: 1500
 };
-var numEnemies = 100;
+var numEnemies = 30;
 var currentScore = 0;
 var totalCollisions = 0;
 var highscore = 0;
 var collisions = {};
+var kamikazeMode = false;
+var secsLeft = 10;
+var highScores = {kamikazeMode: 0, regularMode: 0};
 
 var board = d3.select('body').append('svg')
   .attr('width', '100%')
@@ -76,19 +79,29 @@ var collisionCheck = function (enemy, index) {
   }
 };
 var updateScore = function() {
-  d3.select('.collisions span').text(++totalCollisions);
-  if (currentScore > highscore) {
-    highscore = currentScore;
-    d3.select('.highscore span').text(currentScore);
+  //debugger;
+  if (kamikazeMode) {
+    if(currentScore > highScores['kamikazeMode']) {
+      highScores['kamikazeMode'] = currentScore;
+      d3.select('.highscore span').text(currentScore);
+    }
+    d3.select('.current span').text(++currentScore);
+  } else {
+    if (currentScore > highScores['regularMode']) {
+      highScores['regularMode'] = currentScore;
+      d3.select('.highscore span').text(currentScore);
+    }
+    displayFinalScore();
+    currentScore = 0;
   }
-  currentScore = 0;
+  d3.select('.collisions span').text(++totalCollisions);
 };
 var placeAsteroids = function(data) {
   $asteroids = board.selectAll('.asteroids')
     .data(data, function(d) { return d.id; });
 
   $asteroids 
-    .transition().duration(3000)
+    .transition().duration(1000)
     .attr('x', function(d) { return d.x; } )
     .attr('y', function(d) { return d.y; } )
     .tween('x', function (d, i) {
@@ -104,21 +117,73 @@ var placeAsteroids = function(data) {
     .attr('width', '0')
     .attr('height', '0')
     .transition().duration(500)
-    .attr('width', '40').attr('height', '40')
+    .attr('width', '40').attr('height', '40') 
     .attr('xlink:href', './enemy.png');
+
+  $asteroids.exit()
+    .remove();
 };
 
-setInterval(function() {
-
+var moveEnemies = function() {
+  if (kamikazeMode) {
+    numEnemies = 200;
+  } else {
+    numEnemies = 30;
+  }
   placeAsteroids(makeAsteroids());
-}, 5000);
+};
+var moveIntervalID = setInterval(moveEnemies, 2000);
 
+var countUp = function() {
+  if (!kamikazeMode) {
+    currentScore++;
+    d3.select('.current span').text(currentScore);
+  }
+};
+var scoreIntervalID = setInterval(countUp, 50);
 
-setInterval(function() {
-  currentScore++;
+document.querySelector('.kamikaze').addEventListener('click', function () {
+  kamikazeMode = !kamikazeMode;
+  currentScore = 0;
   d3.select('.current span').text(currentScore);
-}, 50);
+  d3.select('body').classed('kamikaze_bg', kamikazeMode);
+  if (kamikazeMode) {
+    d3.select('.highscore span').text(highScores['kamikazeMode']);
+    numEnemies = 200;
+    d3.select('button').text('Regular Mode');
+  } else {
+    d3.select('.highscore span').text(highScores['regularMode']);
+    d3.select('button').text('KAMIKAZE!');
+  }
+});
 
+var displayFinalScore = function (cb) {
+  d3.select('.final-score')
+    .classed('is-hidden', false)
+    .select('h1 span').text(currentScore);
+  clearInterval(countdownIntervalID);
+  clearInterval(moveIntervalID);
+  clearInterval(scoreIntervalID);
+  document.querySelector('.final-score button').addEventListener('click', function () {
+    if (cb) { cb(); }  
+    scoreIntervalID = setInterval(countUp, 50);
+    moveIntervalID = setInterval(moveEnemies, 2000);
+    d3.select('.final-score').classed('is-hidden', true);
+  });
+};
 
+var countDown = function() {
+  if (kamikazeMode) {
+    secsLeft--;
+    d3.select('.timer span').text(secsLeft);
+    if (secsLeft === 0) {
+      d3.select('.current span').text(currentScore);
+      secsLeft = 10;
+      displayFinalScore(function () { countdownIntervalID = setInterval(countDown, 1000); });
+      currentScore = 0;
+    }
+  } 
+};
+var countdownIntervalID = setInterval(countDown, 1000);
 
 
