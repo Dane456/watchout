@@ -3,3 +3,15 @@
 /* Note: an asteroid image is included in this repo.
 Feel free to use it if you like. */
 
+body {
+  background-image: url("./background.jpg");
+  font-family: Avenir, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+.scoreboard {
+  display: inline-block;
+  padding: 20px;
+  min-width: 200px;
+  background-color: rgba(255,255,255,.5);
+  border-radius: 5px;
+}

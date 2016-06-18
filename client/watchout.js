@@ -1,12 +1,16 @@
 // start slingin' some d3 here.
 var boardSpecs = {
   height: 700,
-  width: 700
+  width: 1500
 };
-var numEnemies = 30;
+var numEnemies = 100;
+var currentScore = 0;
+var totalCollisions = 0;
+var highscore = 0;
+var collisions = {};
 
 var board = d3.select('body').append('svg')
-  .attr('width', boardSpecs.width)
+  .attr('width', '100%')
   .attr('height', boardSpecs.height);
 
 var drag = d3.behavior.drag()
@@ -18,6 +22,8 @@ var drag = d3.behavior.drag()
     d3.select(this)
       .attr('x', d3.event.x)
       .attr('y', d3.event.y);
+
+    $asteroids.each(function (d, i) { collisionCheck(this, i); });
   });
 
 var $player = board.append('image')
@@ -32,6 +38,8 @@ var $player = board.append('image')
   .attr('width', '30')
   .attr('height', '30');
 
+var $asteroids = d3.selectAll('.asteroids');
+
 var makeAsteroids = function() {
   var asteroids = _.range(0, numEnemies).map(function(i) {
     return {
@@ -43,7 +51,8 @@ var makeAsteroids = function() {
   return asteroids;
 };
 
-var collisionCheck = function (enemy) {
+var collisionCheck = function (enemy, index) {
+  //debugger;
   var eBox = enemy.getBBox();
   var enemyLeft = eBox.x;
   var enemyRight = eBox.x + eBox.width;
@@ -60,22 +69,32 @@ var collisionCheck = function (enemy) {
       && enemyTop < playerBottom
       && enemyRight > playerLeft
       && enemyBottom > playerTop 
+      && !collisions[index]
     ) {
-    console.log('HIT');
+    updateScore();
+    collisions[index] = true;
   }
 };
-
+var updateScore = function() {
+  d3.select('.collisions span').text(++totalCollisions);
+  if (currentScore > highscore) {
+    highscore = currentScore;
+    d3.select('.highscore span').text(currentScore);
+  }
+  currentScore = 0;
+};
 var placeAsteroids = function(data) {
-  var $asteroids = board.selectAll('.asteroids')
+  $asteroids = board.selectAll('.asteroids')
     .data(data, function(d) { return d.id; });
 
   $asteroids 
-    .transition().duration(1000)
+    .transition().duration(3000)
     .attr('x', function(d) { return d.x; } )
     .attr('y', function(d) { return d.y; } )
-    .tween('x', function () {
-      return function () { collisionCheck(this); };
-    });
+    .tween('x', function (d, i) {
+      return function () { collisionCheck(this, i); };
+    })
+    .each('end', function (d, i) { collisions[i] = false; });
 
   $asteroids.enter()
     .append('image')
@@ -90,8 +109,15 @@ var placeAsteroids = function(data) {
 };
 
 setInterval(function() {
+
   placeAsteroids(makeAsteroids());
-}, 2000);
+}, 5000);
+
+
+setInterval(function() {
+  currentScore++;
+  d3.select('.current span').text(currentScore);
+}, 50);
 
 
 
